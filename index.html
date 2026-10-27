@@ -4,9 +4,23 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link rel="stylesheet" href="style.css">
-	<title> Pokedex</title>
+	<link rel="icon" type="image/png" href="Images/pokeball-tab-image.png">
+	<title>Pokedex</title>
 </head>
 <body>
+	<header>
+		<h1>P <img style="width: 1.5rem;" src="Images/pokeball-tab-image.png" alt="PokeBall"> kedex</h1>
+	</header>
+	<nav>
+		<form action="/submit" method="POST">
+			<div class="input-wrapper">
+				<input type="text" name="search-query" id="search-query">
+				<button type="submit">Search</button>
+			</div>
+		</form>
+	</nav>
+	<main class="card-container"></main>
+	<aside class="error-display-container"></aside>
 	<script src="app.js"></script>
 </body>
 </html>
