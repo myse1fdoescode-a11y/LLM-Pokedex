@@ -1,49 +1,105 @@
 // ? Data
+
+async function getPokemon(query) {
+    if (typeof query === "string") query = query.trim().toLowerCase()
+    const url = `https://pokeapi.co/api/v2/pokemon/${query}`
+    let pokeData = (await fetch(url))
+    if (pokeData.status === 404){
+        throw new Error('Endpoint does not exist')
+    } else if (!pokeData.ok) {
+        throw new Error('Unable to fetch')
+    } 
+    
+    pokeData = await pokeData.json()
+    return pokeData
+    
+}
+
+let pokedexCard = document.querySelector('div.pokedex-card')
+const errorContainer = document.getElementById('error-container')
 let searchForm = document.querySelector("form")
+
 searchForm.addEventListener("submit", (event) => {
     event.preventDefault()
     const searchQuery = document.getElementById('search-query').value.toLowerCase()
     
-    let main = document.querySelector('main')
-    main.replaceChildren()
+    errorContainer.replaceChildren()
     getPokemon(searchQuery)
-        .then(pokemon => renderPokemon(pokemon))
-        .catch(error => {
-            let errorText = document.createElement('h3')
-            errorText.classList.add('error')
-            errorText.textContent = error
-            main.appendChild(errorText)
+        .then(pokemon => {
+            renderPokexCard(pokemon)
         })
+        .catch(error => displayError(error))
         
 })
 
-async function getPokemon(query) {
-    query = query.trim().toLowerCase()
-    const url = `https://pokeapi.co/api/v2/pokemon/${query}`
-    try {
-        let pokeData = (await fetch(url))
-        if (pokeData.status === 404){
-            throw new Error('Endpoint does not exist')
-        } else if (!pokeData.ok) {
-            throw new Error('Unable to fetch')
-        } 
-        
-        pokeData = await pokeData.json()
-        return pokeData
-    } 
-    catch(err) {
-        /* 
-            ? in the future this would display on the page and tell the user that 
-            ? server didn't return anything
-        */
-        console.log(err)
-    }
+// ? Ui
+let displayError = (err) => {
+    errorContainer.replaceChildren()
+    let errorText = document.createElement('h3')
+    errorText.classList.add('error')
+    errorText.textContent = err
+    errorContainer.appendChild(errorText)
 }
 
-// ? Ui
-function renderPokemon(pokemon) {
-    let card = document.createElement('div')
-    card.classList.add('pokedex-card')
+let pokedexSwipe = (forward) => {
+    // will later need to also ask which state is active. (ie. pokedex or previews etc.)
+    if (!pokedexCard.children[0]) return
+    let nextOperator = forward ? 1: -1
+    let pokemonId = document.querySelector('.pokemon-number').textContent
+    pokemonId = Number(pokemonId)
+    
+    getPokemon(pokemonId + nextOperator)
+        .then(pokemon =>  {
+            renderPokexCard(pokemon)
+        })
+        .catch(error => displayError(error))
+}
+
+let pokedexNavBtnBoth = document.querySelectorAll('.pokedex-nav-btn')
+pokedexNavBtnBoth.forEach(btn => {
+    btn.addEventListener('click', () => {
+        pokedexSwipe(btn.dataset.direction === "next")
+    })
+})
+
+function createStatRow(statObj) {
+    const maxStat = 255
+    const value = statObj.base_stat
+    const name = statObj.stat.name
+    const percent = Math.min((value/maxStat) * 100,100);
+
+    let singleStatContainer = document.createElement('div')
+    singleStatContainer.classList.add('stat-row')
+
+        let statName = document.createElement('span')
+        statName.classList.add('stat-name')
+        statName.textContent = name
+
+        let statTrack = document.createElement('div')
+        statTrack.classList.add('stat-track')
+        statTrack.role = "meter"
+        statTrack.ariaLabel = name
+        statTrack.ariaValueMin ="0"
+        statTrack.ariaValueMax ="255"
+        statTrack.ariaValueNow = value
+        
+        let fill = document.createElement('div')
+        fill.classList.add('stat-fill')
+        statTrack.appendChild(fill)
+        fill.style.width = "0%"
+        requestAnimationFrame(() => {
+            fill.style.width = `${percent}%`
+        })
+        // ? Considering making this a percent representing bar
+        let statValue = document.createElement('span')
+        statValue.classList.add('stat-value')
+        statValue.textContent = value
+        singleStatContainer.append(statName,statTrack,statValue)
+        return singleStatContainer
+}
+
+function renderPokexCard(pokemon) {
+    pokedexCard.replaceChildren()
 
     let cardHead = document.createElement('div')
     cardHead.classList.add('card-head')
@@ -63,7 +119,6 @@ function renderPokemon(pokemon) {
             typeContainer.appendChild(typeWrapper)
         })
         cardHead.append(pokemonName,pokemonNumber,typeContainer)
-    card.appendChild(cardHead)
 
         let cardTop = document.createElement('div')
         cardTop.classList.add('card-top')
@@ -104,35 +159,27 @@ function renderPokemon(pokemon) {
                 abilitiesContainer.append(abilitiesHeader,abilitiesList)
             topInfoContainer.append(metricContainer,abilitiesContainer)
         cardTop.append(topInfoContainer)
-    card.appendChild(cardTop)
+    
     let statsContainer = document.createElement('div')
     statsContainer.classList.add('pokemon-stats')
-        let statListContainer1 = document.createElement('div')
-            statListContainer1.classList.add('stat-list')
-        let statListContainer2 = document.createElement('div')
-            statListContainer2.classList.add('stat-list')
-            pokemon.stats.forEach((statObj,index) => {
-                    
-                let singleStatContainer = document.createElement('div')
-                singleStatContainer.classList.add('stat-container')
-                    let statName = document.createElement('p')
-                    statName.classList.add('stat-name')
-                    statName.textContent = statObj.stat.name
-                    // ? Considering making this a percent representing bar
-                    let statValue = document.createElement('p')
-                    statValue.classList.add('stat-value')
-                    statValue.textContent = statObj.base_stat
-                    singleStatContainer.append(statName,statValue)
-                if (index < 3){
-                    statListContainer1.appendChild(singleStatContainer)
-                    return
-                }
-                statListContainer2.appendChild(singleStatContainer)
-            })
-        statsContainer.append(statListContainer1,statListContainer2)
-        card.append(statsContainer)
+    pokemon.stats.forEach(statObj => {
+        let newStat = createStatRow(statObj)
+        statsContainer.appendChild(newStat)
+    })
+    pokedexCard.append(cardHead,cardTop,statsContainer)
+    
+    // let pokedexControlWrapperBack = document.createElement('aside')
+    // pokedexControlWrapperBack.classList.add('pokedex-control-wrapper')
+    
+    // let backBtn = document.createElement('button')
+    // backBtn.classList.add('pokedex-control')
+    // backBtn.id = "back-control"
+    // pokedexControlWrapperBack.appendChild(backBtn)
 
-    const main = document.querySelector('main')
-    main.appendChild(card)
-
+    // let pokedexControlWrapperNext = pokedexControlWrapperBack.cloneNode()
+    // let nextBtn = document.createElement('button')
+    // nextBtn.classList.add('pokedex-control')
+    // nextBtn.id = "next-control"
+    // pokedexControlWrapperNext.appendChild(nextBtn)
+    
 }
