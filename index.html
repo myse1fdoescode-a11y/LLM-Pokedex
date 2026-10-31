@@ -5,12 +5,17 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link rel="stylesheet" href="style.css">
 	<link rel="icon" type="image/png" href="Images/pokeball-tab-image.png">
+	
+	<!-- Fonts -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rubik:ital,wght@0,300..900;1,300..900&display=swap" rel="stylesheet">
 	<title>Pokedex</title>
 </head>
 <body>
 	<nav>
 		<header>
-			<h1>P <img style="width: 1.5rem;" src="Images/pokeball-tab-image.png" alt="PokeBall"> kedex</h1>
+			<h1>P <img style="width: 3rem;" src="Images/pokeball-tab-image.png" alt="PokeBall"> kedex</h1>
 		</header>
 		<form action="/submit" method="POST">
 			<div class="input-wrapper">
@@ -20,16 +25,29 @@
 		</form>
 		<button id="help">Confused?</button>
 	</nav>
-	<aside id="error-container"></aside>
-	<main class="card-container">
-		<aside class="pokedex-nav-wrapper">
-			<button data-direction="previous" aria-label="Previous Pokemon" class="pokedex-nav-btn"><i class="fa-solid fa-angles-left"></i></button>
-		</aside>
-		<!-- Main pokedex card -->
-		<div class="pokedex-card"></div>
-		<aside class="pokedex-nav-wrapper">
-			<button data-direction="next" aria-label=" Next Pokemon" class="pokedex-nav-btn"><i class="fa-solid fa-angles-left" style="transform: rotate(180deg);"></i></button>
-		</aside>
+	<!-- !Status -->
+	<div id="status-container">
+		<div class="load-container">
+			<div class="pokedex hidden">
+				<h4 data-frame="3" >Loading</h4>
+				<img src="Images/pokeball-tab-image.png" alt="spinning pokeball">
+			</div>
+			<div class="preview"></div>
+		</div>
+		<aside id="error-container"></aside>
+	</div>
+	<main>
+		<section id="pokedex" class="card-container active">
+			<aside class="pokedex-nav-wrapper">
+				<button data-direction="previous" aria-label="Previous Pokemon" class="pokedex-nav-btn"><i class="fa-solid fa-angles-left"></i></button>
+			</aside>
+			<!-- Main pokedex card -->
+			<div class="pokedex-card"></div>
+			<aside class="pokedex-nav-wrapper">
+				<button data-direction="next" aria-label=" Next Pokemon" class="pokedex-nav-btn"><i class="fa-solid fa-angles-left" style="transform: rotate(180deg);"></i></button>
+			</aside>
+		</section>
+		<section id="preview-container" class=""></section>
 	</main>
 	<script src="app.js"></script>
 	<script src="https://kit.fontawesome.com/ba3a0824a2.js" crossorigin="anonymous"></script>
