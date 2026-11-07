@@ -22,6 +22,10 @@
 				<input type="text" name="search-query" id="search-query">
 				<button type="submit">Search</button>
 			</div>
+			<div class="type-filter-accordion">
+				<div class="accordion-header"></div>
+				<div class="drop-down collapsed"></div>
+			</div>
 		</form>
 		<button id="help">Confused?</button>
 	</nav>
@@ -32,12 +36,19 @@
 				<h4 data-frame="3" class="pixel-text" >Loading</h4>
 				<img src="Images/pokeball-tab-image.png" alt="spinning pokeball">
 			</div>
-			<div class="preview"></div>
+			<div class="preview">
+				<figure class="pokeball">
+					<img src="Images/pokeball-tab-image.png" alt="pokeball" srcset>
+					<span class="animate-sphere"></span>
+				</figure>
+				<h4 data-frame="1" class="pixel-text">Searching.</h4>
+			</div>
 		</div>
 		<aside id="error-container" class="hidden"></aside>
 	</div>
 	<main>
-		<section id="pokedex" class="card-container active">
+		<section id="pokedex" class="card-container">
+			<button id="exit-pokedex" class="pixel-text">Exit</button>
 			<div class="mobile-controls">
 				<button data-direction="previous" aria-label="Previous Pokemon" class="pokedex-nav-btn"><img src="Images/double-chevron.png" alt="pixelated double chevron"></button>
 				<button data-direction="next" aria-label=" Next Pokemon" class="pokedex-nav-btn"><img src="Images/double-chevron.png" alt="pixelated double chevron"></button>
@@ -46,15 +57,12 @@
 				<button data-direction="previous" aria-label="Previous Pokemon" class="pokedex-nav-btn"><img src="Images/double-chevron.png" alt="pixelated double chevron"></button>
 			</aside>
 			<!-- Main pokedex card -->
-			<div class="card-viewport">
-				<div class="pokedex-card theme-color-border outgoing"></div>
-				<div class="pokedex-card incoming hidden"></div>
-			</div>
+				<div class="pokedex-card theme-color-border"></div>
 			<aside class="pokedex-nav-wrapper">
 				<button data-direction="next" aria-label=" Next Pokemon" class="pokedex-nav-btn"><img src="Images/double-chevron.png" alt="pixelated double chevron"></button>
 			</aside>
 		</section>
-		<section id="preview-container" class=""></section>
+		<section id="preview-container" class="active"></section>
 	</main>
 	<script src="app.js"></script>
 	<script src="https://kit.fontawesome.com/ba3a0824a2.js" crossorigin="anonymous"></script>
