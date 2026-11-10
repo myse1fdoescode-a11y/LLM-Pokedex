@@ -36,12 +36,12 @@
 				<h4 data-frame="3" class="pixel-text" >Loading</h4>
 				<img src="Images/pokeball-tab-image.png" alt="spinning pokeball">
 			</div>
-			<div class="preview">
+			<div class="preview hidden">
 				<figure class="pokeball">
 					<img src="Images/pokeball-tab-image.png" alt="pokeball" srcset>
 					<span class="animate-sphere"></span>
 				</figure>
-				<h4 data-frame="1" class="pixel-text">Searching.</h4>
+				<h4 data-frame="2" class="pixel-text">Searching</h4>
 			</div>
 		</div>
 		<aside id="error-container" class="hidden"></aside>
@@ -62,7 +62,14 @@
 				<button data-direction="next" aria-label=" Next Pokemon" class="pokedex-nav-btn"><img src="Images/double-chevron.png" alt="pixelated double chevron"></button>
 			</aside>
 		</section>
-		<section id="preview-container" class="active"></section>
+		<section id="preview" class="">
+			<h2 class="page-number pixel-text"></h2>
+			<div id="preview-container"></div>
+			<div class="page-control-container">
+				<button data-direction="previous" aria-label="Previous Pokemon" class="page-control pixel-text">Previous</button>
+				<button data-direction="next" aria-label=" Next Pokemon" class="page-control pixel-text">Next</button>
+			</div>
+		</section>
 	</main>
 	<script src="app.js"></script>
 	<script src="https://kit.fontawesome.com/ba3a0824a2.js" crossorigin="anonymous"></script>

@@ -13,38 +13,33 @@ async function getInitNameData() {
     pokemonNames = data.results;
 }
 
-async function findPokeMatches(query="",selectedTypes="") {
-    console.log(query,selectedTypes)
-    console.log(pokemonNames.map(poke => poke.name))
+async function findPokeMatches(query="",selectedTypes=[]) {
 
     let matchesByName = pokemonNames.filter(({ name }) => 
         name.includes(query)
     );
-
-    const pokemon = await Promise.all(
+    if (!matchesByName[0]) throw new Error("Pokemon not found. Check spelling or try a pokedex number.")
+    
+        const pokemon = await Promise.all(
         matchesByName.map(({ name }) => getPokemonData(name))
     );
     
-    if (!selectedTypes) return pokemon
+    if (!selectedTypes[0]) return pokemon
     
-    return pokemon.filter(poke => {
+    const finalResults = pokemon.filter(poke => {
         selectedTypes.every(selectedType => 
             poke.types.some(({ type }) => type.name == selectedType)
         )
     })
+    if (!finalResults[0]) throw new Error('Whoops! Looks like the pokemon you were searching for ran away (Try again later).')
+    
+    return finalResults
 }
 
 let pokemonAbortController;
 async function getPokemonData(query) {
     const url = `https://pokeapi.co/api/v2/pokemon/${query}`
-    
-    // if (pokemonAbortController) {
-    //     pokemonAbortController.abort()
-    // }
-    
-    // pokemonAbortController = new AbortController()
-    // const { signal } = pokemonAbortController
-    
+
     let pokemonData = await fetch(url)
     
     checkFetchError(pokemonData)
@@ -82,15 +77,13 @@ const checkFetchError = (fetchResponse) => {
         throw new Error('Whoops! Looks like the pokemon you were searching for ran away (Try again later).')
     }
 }
-
+const previewSection = document.getElementById('preview')
 const previewContainer = document.getElementById('preview-container')
-
-const clearPreviews = () => previewContainer.replaceChildren()
 
 const pokedex = document.getElementById('pokedex')
 
 const getState = () => {
-    const previewContainerIsActive = previewContainer.classList.contains('active')
+    const previewContainerIsActive = previewSection.classList.contains('active')
     const pokedexIsActive = pokedex.classList.contains('active')
     
     if (previewContainerIsActive && pokedexIsActive) throw new Error('Both states are active')
@@ -106,6 +99,8 @@ let loadState = {
     loadActive: null,
     pokedexLoadElmnt: document.querySelector('div.load-container > .pokedex'),
     previewLoadElmnt: document.querySelector('div.load-container > .preview'),
+    text: null,
+    img: null,
     animateIntervalId: undefined,
     errorContainer: document.getElementById('error-container'),
     recentError: null,
@@ -114,13 +109,6 @@ let loadState = {
     setState() {
         const state = getState()
         this.loadState = state
-        if (state === "pokedex") {
-            this.pokedexLoadElmnt.classList.toggle('hidden',false)
-            this.previewLoadElmnt.classList.toggle('hidden',true)
-        } else if (state === "preview") {
-            this.pokedexLoadElmnt.classList.toggle('hidden',true)
-            this.previewLoadElmnt.classList.toggle('hidden',false)
-        }
     },
 
     startLoad() {
@@ -130,38 +118,62 @@ let loadState = {
             clearInterval(this.animateIntervalId)
         }
         this.loadActive = true
-        let text;
-        let img;
-        let currentAngle = 0
+
+        const nextDotFrame = () => {
+            let frame = Number(this.text.dataset.frame) + 1
+            if (frame > 3) frame = 2
+            this.text.dataset.frame = frame
+        }
 
         if (this.loadState === 'pokedex') {
-            text = this.pokedexLoadElmnt.querySelector('h4')
-            img = this.pokedexLoadElmnt.querySelector('img')
-
+            this.pokedexLoadElmnt.classList.toggle('hidden',false)
+            this.text = this.pokedexLoadElmnt.querySelector('h4')
+            this.img = this.pokedexLoadElmnt.querySelector('img')
+            
+            let currentAngle = 280
+            
             const rotate = (angle=currentAngle) => {
                 requestAnimationFrame(() => {
-                    img.style.transform = `rotate(${angle}deg)`
+                    this.img.style.transform = `rotate(${angle}deg)`
                 })
             }
-            rotate(280)
+            rotate()
             this.pokedexLoadElmnt.classList.toggle('hidden',false)
             this.animateIntervalId = setInterval(() => {
 
-                let frame = Number(text.dataset.frame) + 1
-                if (frame > 3) frame = 2
-                text.dataset.frame = frame
-
+                nextDotFrame()
                 currentAngle += 280
                 rotate()
             },500)
+        } else if (this.loadState === 'preview') {
+            this.previewLoadElmnt.classList.toggle('hidden',false)
+            this.text = this.previewLoadElmnt.querySelector('h4')
+            this.img = this.previewLoadElmnt.querySelector('figure')
+            this.img.style.animation = "pokeball-wobble 2s ease-in infinite"
+            const innerBall = this.img.querySelector('span')
+            innerBall.style.animation = "animate-sphere-load-error 1s infinite ease-out"
+            this.animateIntervalId = setInterval(() => nextDotFrame(),500)
         }
     },
 
     terminate() {
+        if (this.loadState === "preview") {
+            clearInterval(this.animateIntervalId)
+            this.img.style.animation = "pokeball-load-nod 400ms ease-in"
+            const innerBall = this.img.querySelector('span')
+            innerBall.style.animation = "animate-sphere-success 400ms ease-in forwards"
+            this.text.style.textAlign = "center"
+            this.text.textContent = "Gotcha!"
+            this.text.dataset.frame = 0
+            return new Promise(resolve => setTimeout(() => {
+                this.previewLoadElmnt.classList.toggle('hidden',true)
+                this.loadActive = false
+                resolve()
+            },400))
+        }
         clearInterval(this.animateIntervalId)
         this.pokedexLoadElmnt.classList.toggle('hidden',true)
         this.previewLoadElmnt.classList.toggle('hidden',true)
-        this.loadActive = false
     },
 
     setErrorDisplay(error=undefined) {
@@ -169,12 +181,24 @@ let loadState = {
         
         if (!error)  {
             this.errorContainer.classList.toggle('hidden',true)
+            this.previewLoadElmnt.classList.toggle('hidden',true)
             this.errorActive = false
             return
         }
+
         this.recentError = error
         this.errorActive = true
-        this.terminate()
+        if (this.loadState === "preview") {
+            this.img.style.animation = "none"
+            clearInterval(this.animateIntervalId)
+            this.text.dataset.frame = 0
+            this.text.style.textAlign = "left"
+            const innerBall = this.img.querySelector('span')
+            innerBall.style.animation = "none"
+            innerBall.style.backgroundColor = "rgb(250, 46, 46)"
+            this.text.textContent = error
+            return
+        }
         this.errorContainer.classList.toggle('hidden',false)
         const errorSvg = document.createElement('i')
         errorSvg.classList.add('fa-solid','fa-exclamation')
@@ -187,10 +211,10 @@ let loadState = {
 
 const setState = (state) => {
     if (state === "pokedex") {
-        previewContainer.classList.toggle('active',false)
+        previewSection.classList.toggle('active',false)
         pokedex.classList.toggle('active',true)
     } else if (state === "preview") {
-        previewContainer.classList.toggle('active',true)
+        previewSection.classList.toggle('active',true)
         pokedex.classList.toggle('active',false)
     }
     loadState.setState(state)
@@ -216,6 +240,8 @@ let pokedexCard = document.querySelector('div.pokedex-card')
 
 const clearPokedex = () => pokedexCard.replaceChildren()
 
+const clearPreviews = () => previewContainer.replaceChildren()
+
 function renderPokedexCard(pokemonData) {
     const pokemon = pokemonData.pokemon
     const species = pokemonData.species
@@ -232,14 +258,13 @@ function renderPokedexCard(pokemonData) {
             pokedexCard.classList.remove(type)
         }
     })
-    clearPokedex()
     pokedexCard.classList.add(`${pokemon.types[0].type.name}`)
     
     const cardHead = document.createElement('div')
     cardHead.classList.add('card-head')
         const cardHeadItems = createCardHead(pokemon)
         const typeNames = pokemon.types.map(typeObj => typeObj.type.name)
-        console.log(typeNames)
+        
         cardHead.append(cardHeadItems.name,cardHeadItems.number,createTypeIcons(typeNames))
         
         const cardTop = document.createElement('div')
@@ -259,14 +284,14 @@ function renderPokedexCard(pokemonData) {
         const speciesAccordionWrapper = createSpeciesAccordion(pokemon,species)
         
         const statsContainer = createStats(pokemon)
-
+    clearPokedex()
     pokedexCard.append(cardHead,cardTop,speciesAccordionWrapper,statsContainer)
 }
 
 function renderPreviewCard(pokemon) {
     const previewCard = document.createElement('div')
-    previewCard.classList.add('pokemon-theme-border', `${pokemon.types[0].type.name}`)
-    
+    previewCard.classList.add('theme-color-border', `${pokemon.types[0].type.name}`,'preview-card')
+
     const cardHeadItems = createCardHead(pokemon)
     const cardHead = document.createElement('div')
     cardHead.classList.add('preview-head')
@@ -275,7 +300,8 @@ function renderPreviewCard(pokemon) {
     const cardSprite = createSprite(pokemon)
     cardSprite.classList.add('preview-figure')
     const typeContainer = createTypeIcons(pokemon.types.map(typObj => typObj.type.name))
-    typeContainer.classList.add('preview-type-container')
+    typeContainer.classList.remove('type-container')
+    typeContainer.classList.add('preview-type-container','pixel-text')
 
     previewCard.append(cardHead,cardSprite,typeContainer)
     
@@ -437,15 +463,44 @@ function createSpeciesAccordion(pokemon,species) {
     return speciesInfoWrapper
 }
 
-async function laodData(query,state) {
-    if (typeof query === "string") query = query.trim().toLowerCase()
-    /* 
-        * Next time make it so that if a number is searched the pokedex card loads and 
-        ? maybe style cards
-        ? or stick with creating all the logic first
-    */ 
-    if (!query) return
+let previewResults;
+const maxPageSize = 10;
+let currentPage;
+let totalPages;
+const pageNumberElmnt = document.querySelector('.page-number')
+const renderPage = (page) => {
+    if (page > totalPages || page <= 0) return
+    
+    currentPage = page
+    pageNumberElmnt.textContent = `${currentPage}/${totalPages}`
 
+    clearPreviews()
+    const start = 0 + maxPageSize * (page - 1)
+    const renderToPokedex = (card) => {        
+        const pokemonNumber = card.querySelector('.pokemon-number').textContent
+        laodData(pokemonNumber,'pokedex')
+    }
+
+    if (page === totalPages) {
+        previewResults.slice(start).forEach(pokemon => {
+            const previewCard = renderPreviewCard(pokemon)
+            previewCard.addEventListener('click',() => renderToPokedex(previewCard))
+            previewContainer.append(previewCard)
+        })
+        return
+    }
+    const end = start + maxPageSize
+    previewResults.slice(start,end).forEach(pokemon => {
+        const previewCard = renderPreviewCard(pokemon)
+        previewCard.addEventListener('click',() => renderToPokedex(previewCard))
+        previewContainer.append(previewCard)
+    })
+
+}
+
+async function laodData(query,state) {
+    if (!query) return
+    console.log(query)
     setState(state)
     loadState.setErrorDisplay()
     loadState.startLoad()
@@ -453,15 +508,19 @@ async function laodData(query,state) {
     try {
         if (state === "pokedex") {
             const pokemon = await getPokemonData(query)
-            const species = await getPokemonSpecies(query)
+            const species = await getPokemonSpecies(pokemon.species.name)
             renderPokedexCard({pokemon, species})
         } else if (state === "preview") {
             clearPreviews()
-            const matches = await findPokeMatches(query)
-            for (const pokemon of matches) {
-                const pokemonPreviewCard = renderPreviewCard(pokemon)
-                previewContainer.appendChild(pokemonPreviewCard)
+            previewResults = await findPokeMatches(query)
+            
+            if (previewResults.length % 10 === 0) {
+                totalPages = previewResults.length / 10
+            } else {
+                totalPages = Math.ceil(previewResults.length / 10)
             }
+            await loadState.terminate()
+            renderPage(1)
         }
 
     } catch (error) {
@@ -470,35 +529,50 @@ async function laodData(query,state) {
         }
     }
     finally {
-        loadState.terminate()
+        if (getState() === "pokedex") loadState.terminate();
     }
 }
 
 let perviousInput;
-let searchForm = document.querySelector("form")
+const searchForm = document.querySelector("form")
 searchForm.addEventListener("submit", (event) => {
     event.preventDefault()
     const searchQuery = document.getElementById('search-query').value.toLowerCase().trim()
-    if (perviousInput === searchQuery && loadState.errorActive) {
+    
+    if (perviousInput === searchQuery) {
+        return
+    }
+    if (Number.isInteger(Number(searchQuery))) {
+        laodData(searchQuery,'pokedex')
         return
     }
     perviousInput = searchQuery
     laodData(searchQuery,'preview')
 })
 
-let pokedexNavBtnBoth = document.querySelectorAll('.pokedex-nav-btn')
+const pokedexNavBtnBoth = document.querySelectorAll('.pokedex-nav-btn')
 pokedexNavBtnBoth.forEach(btn => {
     btn.addEventListener('click', () => {
         pokedexSwipe(btn.dataset.direction === "next")
     })
 })
 
-let exitPokedexBtn = document.getElementById('exit-pokedex')
+const previewPageControls = document.querySelectorAll('.page-control')
+previewPageControls.forEach(btn => {
+    btn.addEventListener("click", (ev) => {
+        const nextPage = ev.target.dataset.direction === "next" ? currentPage + 1 : currentPage -1
+        renderPage(nextPage)
+        previewSection.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+        })
+    })
+}) 
+
+const exitPokedexBtn = document.getElementById('exit-pokedex')
 exitPokedexBtn.addEventListener('click', () => {
-    clearPokedex()
     setState('preview')
 })
 
 getInitNameData()
     .then(() => console.dir(pokemonNames))
-setState('preview')
