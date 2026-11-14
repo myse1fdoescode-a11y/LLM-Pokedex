@@ -16,22 +16,23 @@ async function getInitNameData() {
 async function findPokeMatches(query="",selectedTypes=[]) {
 
     let matchesByName = pokemonNames.filter(({ name }) => 
-        name.includes(query)
+        !query || name.includes(query)
     );
-    if (!matchesByName[0]) throw new Error("Pokemon not found. Check spelling or try a pokedex number.")
+    if (!matchesByName.length && query) throw new Error("Pokemon not found. Check spelling or try a pokedex number.")
     
         const pokemon = await Promise.all(
         matchesByName.map(({ name }) => getPokemonData(name))
     );
     
-    if (!selectedTypes[0]) return pokemon
     
-    const finalResults = pokemon.filter(poke => {
+    const finalResults = pokemon.filter(poke => 
         selectedTypes.every(selectedType => 
-            poke.types.some(({ type }) => type.name == selectedType)
+            poke.types.some(({ type }) => type.name === selectedType)
         )
-    })
-    if (!finalResults[0]) throw new Error('Whoops! Looks like the pokemon you were searching for ran away (Try again later).')
+    )
+    if (!finalResults.length) {
+        throw new Error('No Pokemon matched those filters.')
+    } 
     
     return finalResults
 }
@@ -146,8 +147,10 @@ let loadState = {
                 rotate()
             },500)
         } else if (this.loadState === 'preview') {
+            document.getElementById('preview').classList.toggle('active',false)
             this.previewLoadElmnt.classList.toggle('hidden',false)
             this.text = this.previewLoadElmnt.querySelector('h4')
+            this.text.textContent = "Searching"
             this.img = this.previewLoadElmnt.querySelector('figure')
             this.img.style.animation = "pokeball-wobble 2s ease-in infinite"
             const innerBall = this.img.querySelector('span')
@@ -168,6 +171,7 @@ let loadState = {
             return new Promise(resolve => setTimeout(() => {
                 this.previewLoadElmnt.classList.toggle('hidden',true)
                 this.loadActive = false
+                document.getElementById('preview').classList.toggle('active',true)
                 resolve()
             },400))
         }
@@ -221,17 +225,6 @@ const setState = (state) => {
 }
 
 // ? Ui
-
-let pokedexSwipe = (forward) => {
-
-    if (!pokedexCard.children[0] || getState() !== 'pokedex') return
-
-    const nextOperator = forward ? 1: -1
-    let pokemonId = document.querySelector('.pokemon-number').textContent
-    pokemonId = Number(pokemonId)
-    laodData(pokemonId + nextOperator,'pokedex')
-
-}
 
 
 let normalizeName = (s) => typeof s === "string" ? s[0].toLocaleUpperCase() + s.slice(1) : '';
@@ -463,6 +456,23 @@ function createSpeciesAccordion(pokemon,species) {
     return speciesInfoWrapper
 }
 
+
+const help = {
+    isActive: false,
+    element: document.querySelector('section.help')
+}
+
+let pokedexSwipe = (forward) => {
+
+    if (!pokedexCard.children[0] || getState() !== 'pokedex') return
+
+    const nextOperator = forward ? 1: -1
+    let pokemonId = document.querySelector('.pokemon-number').textContent
+    pokemonId = Number(pokemonId)
+    laodData(pokemonId + nextOperator,'pokedex')
+
+}
+
 let previewResults;
 const maxPageSize = 10;
 let currentPage;
@@ -470,8 +480,11 @@ let totalPages;
 const pageNumberElmnt = document.querySelector('.page-number')
 const renderPage = (page) => {
     if (page > totalPages || page <= 0) return
+    const previousButton = document.querySelector('button.page-control:nth-child(1)')
+    const nextButton = document.querySelector('button.page-control:nth-child(2)')
     
     currentPage = page
+
     pageNumberElmnt.textContent = `${currentPage}/${totalPages}`
 
     clearPreviews()
@@ -481,6 +494,12 @@ const renderPage = (page) => {
         laodData(pokemonNumber,'pokedex')
     }
 
+    let hidePrevious = page===1
+    previousButton.classList.toggle('hidden',hidePrevious)
+    let hideNext = page===totalPages
+    nextButton.classList.toggle('hidden',hideNext)
+
+
     if (page === totalPages) {
         previewResults.slice(start).forEach(pokemon => {
             const previewCard = renderPreviewCard(pokemon)
@@ -488,7 +507,7 @@ const renderPage = (page) => {
             previewContainer.append(previewCard)
         })
         return
-    }
+    } 
     const end = start + maxPageSize
     previewResults.slice(start,end).forEach(pokemon => {
         const previewCard = renderPreviewCard(pokemon)
@@ -498,21 +517,51 @@ const renderPage = (page) => {
 
 }
 
-async function laodData(query,state) {
-    if (!query) return
-    console.log(query)
+
+const typeFilterIcons = document.querySelectorAll('.type-filter-accordion span')
+typeFilterIcons.forEach(icon => {
+    icon.addEventListener('click', () => icon.classList.toggle('active'))
+})
+
+const getTypeFilters = () => {
+    const activeIcons = Array.from(typeFilterIcons).filter(icon => icon.classList.contains('active'))
+
+    const typeFilters = activeIcons.map(icon => icon.classList[1])
+    return typeFilters
+}
+
+async function laodData(query,state,from=null,typeFilters) {
+    if (!pokemonNames) await getInitNameData()
+    
+    if (!query && !typeFilters[0]) return
+    
+    
     setState(state)
     loadState.setErrorDisplay()
     loadState.startLoad()
+    const scrollTo = (element) => {
+        element.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+        })
+    }
     
     try {
+        if (!pokemonNames) await getInitNameData()
         if (state === "pokedex") {
+            const exitPokedexBtn = document.getElementById('exit-pokedex')
+            const direct = from==="direct" || previewContainer.childElementCount === 0
+            exitPokedexBtn.classList.toggle('hidden',direct)
+    
+            if (direct) clearPreviews()
+            scrollTo(document.querySelector('main'))
             const pokemon = await getPokemonData(query)
             const species = await getPokemonSpecies(pokemon.species.name)
             renderPokedexCard({pokemon, species})
         } else if (state === "preview") {
             clearPreviews()
-            previewResults = await findPokeMatches(query)
+            scrollTo(document.getElementById('status-container'))
+            previewResults = await findPokeMatches(query,typeFilters)
             
             if (previewResults.length % 10 === 0) {
                 totalPages = previewResults.length / 10
@@ -533,26 +582,42 @@ async function laodData(query,state) {
     }
 }
 
-let perviousInput;
+let searchSignature;
 const searchForm = document.querySelector("form")
+const sameFilters = (a, b) =>
+    a.length === b.length && a.every((filter, i) => filter === b[i]);
+
 searchForm.addEventListener("submit", (event) => {
     event.preventDefault()
+    if (help.isActive) return
+    document.querySelector('.help').classList.toggle('initial',false)
     const searchQuery = document.getElementById('search-query').value.toLowerCase().trim()
+    const activeTypeFilters = getTypeFilters()
     
-    if (perviousInput === searchQuery) {
+    // * Create a variable object that holds the most recent search, which includes the type filter.
+    
+    if (searchQuery && Number.isInteger(Number(searchQuery))) {
+        if (searchSignature?.searchQuery === searchQuery) {
+            return;
+        }
+        searchSignature = { searchQuery }
+        laodData(searchQuery,'pokedex','direct')
         return
     }
-    if (Number.isInteger(Number(searchQuery))) {
-        laodData(searchQuery,'pokedex')
-        return
-    }
-    perviousInput = searchQuery
-    laodData(searchQuery,'preview')
+    if (
+        searchSignature &&
+        searchSignature.searchQuery === searchQuery &&
+        sameFilters(searchSignature.activeTypeFilters, activeTypeFilters)
+    ) return
+    
+    searchSignature = {searchQuery, activeTypeFilters}
+    laodData(searchQuery,'preview',null,activeTypeFilters)
 })
 
 const pokedexNavBtnBoth = document.querySelectorAll('.pokedex-nav-btn')
 pokedexNavBtnBoth.forEach(btn => {
     btn.addEventListener('click', () => {
+        if (help.isActive) return
         pokedexSwipe(btn.dataset.direction === "next")
     })
 })
@@ -560,19 +625,27 @@ pokedexNavBtnBoth.forEach(btn => {
 const previewPageControls = document.querySelectorAll('.page-control')
 previewPageControls.forEach(btn => {
     btn.addEventListener("click", (ev) => {
+        if (help.isActive) return
         const nextPage = ev.target.dataset.direction === "next" ? currentPage + 1 : currentPage -1
         renderPage(nextPage)
-        previewSection.scrollIntoView({
-        behavior: "smooth",
-        block: "start"
-        })
     })
 }) 
 
 const exitPokedexBtn = document.getElementById('exit-pokedex')
 exitPokedexBtn.addEventListener('click', () => {
+    if (help.isActive) return
     setState('preview')
 })
 
-getInitNameData()
-    .then(() => console.dir(pokemonNames))
+const exitHelpBtn = document.querySelector('button.exit-help')
+exitHelpBtn.addEventListener('click', () => {
+    help.isActive = false
+    help.element.classList.toggle('active',false)
+    
+})
+
+const helpBtn = document.getElementById("help")
+helpBtn.addEventListener('click', () => {
+    help.isActive = true
+    help.element.classList.toggle('active',true)
+})

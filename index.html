@@ -10,24 +10,47 @@
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rubik:ital,wght@0,300..900;1,300..900&display=swap" rel="stylesheet">
-	<title>Pokedex</title>
+	<title>Modern Pokedex</title>
 </head>
 <body>
 	<nav>
 		<header>
-			<h1>P <img style="width: 3rem;" src="Images/pokeball-tab-image.png" alt="PokeBall"> kedex</h1>
+			<h1>P <img src="Images/pokeball-tab-image.png" alt="PokeBall"> kedex</h1>
 		</header>
-		<form action="/submit" method="POST">
-			<div class="input-wrapper">
-				<input type="text" name="search-query" id="search-query">
-				<button type="submit">Search</button>
-			</div>
-			<div class="type-filter-accordion">
-				<div class="accordion-header"></div>
-				<div class="drop-down collapsed"></div>
-			</div>
-		</form>
-		<button id="help">Confused?</button>
+		<div class="form-help">
+			<form action="/submit" method="POST">
+				<div class="input-wrapper">
+					<input type="text" placeholder="Search for a Pokemon" name="search-query" id="search-query">
+					<button type="submit" class="primary-btn">Search</button>
+				</div>
+				<div class="type-filter-accordion collapsed">
+					<div class="accordion-header">
+						<span class="type-icon fire"><img src="Images/icons/fire.svg" alt="Fire type"></span>
+						<span class="type-icon water"><img src="Images/icons/water.svg" alt="Water type"></span>
+						<span class="type-icon grass"><img src="Images/icons/grass.svg" alt="Grass type"></span>
+						<span class="type-icon electric"><img src="Images/icons/electric.svg" alt="Electric type"></span>
+					<button type="button" class="collapseBtn" onclick="document.querySelector('.type-filter-accordion').classList.toggle('collapsed')"><i class="fa-solid fa-chevron-down"></i></button>
+					</div>
+					<div class="drop-down">
+						<span class="type-icon bug"><img src="Images/icons/bug.svg" alt="Bug type"></span>
+						<span class="type-icon dark"><img src="Images/icons/dark.svg" alt="Dark type"></span>
+						<span class="type-icon dragon"><img src="Images/icons/dragon.svg" alt="Dragon type"></span>
+						<span class="type-icon fairy"><img src="Images/icons/fairy.svg" alt="Fairy type"></span>
+						<span class="type-icon fighting"><img src="Images/icons/fighting.svg" alt="Fighting type"></span>
+						<span class="type-icon flying"><img src="Images/icons/flying.svg" alt="Flying type"></span>
+						<span class="type-icon ghost"><img src="Images/icons/ghost.svg" alt="Ghost type"></span>
+						<span class="type-icon ground"><img src="Images/icons/ground.svg" alt="Ground type"></span>
+						<span class="type-icon ice"><img src="Images/icons/ice.svg" alt="Ice type"></span>
+						<span class="type-icon normal"><img src="Images/icons/normal.svg" alt="Normal type"></span>
+						<span class="type-icon poison"><img src="Images/icons/poison.svg" alt="Poison type"></span>
+						<span class="type-icon psychic"><img src="Images/icons/psychic.svg" alt="Psychic type"></span>
+						<span class="type-icon rock"><img src="Images/icons/rock.svg" alt="Rock type"></span>
+						<span class="type-icon steel"><img src="Images/icons/steel.svg" alt="Steel type"></span>
+					</div>
+				</div>
+			</form>
+			<button id="help" class="primary-btn">Confused?</button>
+		</div>
 	</nav>
 	<!-- !Status -->
 	<div id="status-container">
@@ -47,6 +70,27 @@
 		<aside id="error-container" class="hidden"></aside>
 	</div>
 	<main>
+		<section class="help initial">
+			<button onclick="document.querySelector('section.help').classList.toggle('active',false)" class="exit-help primary-btn pixel-text">X</button>
+			<h3>Search for Pokémon</h3>
+			<ul>
+				<li>Enter a Pokémon name or Pokédex number, then select Search.</li>
+				<li>Leave the search box empty to browse all Pokémon.</li>
+				<li>Select type icons to filter your results.</li>
+			</ul>
+			<h3>Browse results</h3>
+			<ul>
+				<li>Use Previous and Next to move between result pages.</li>
+				<li>Select a Pokémon card to open its Pokédex entry.</li>
+			</ul>
+			<h3>Use the Pokédex</h3>
+			<ul>
+				<li>Use the arrows to view the previous or next Pokémon.</li>
+				<li>Select the species description to expand or collapse it.</li>
+				<li>Select Exit to return to your results.</li>
+			</ul>
+			<p><img src="Images/double-chevron.png" alt="arrow">Press the 'Confused?' button to view these instructions any time.</p>
+		</section>
 		<section id="pokedex" class="card-container">
 			<button id="exit-pokedex" class="pixel-text">Exit</button>
 			<div class="mobile-controls">
